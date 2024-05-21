@@ -7,14 +7,12 @@ import logging
 import sys
 import argparse
 import threading
-#TODO handle args
-#listen mode vs not listen mode
 
 
 
 def handle_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--ip_address',help='will use 127.0.0.1 if none provided', default=ipaddress.ip_address("127.0.0.1"))
+    parser.add_argument('--ip_address',"--ip",help='will use 127.0.0.1 if none provided', default=ipaddress.ip_address("127.0.0.1"))
     parser.add_argument("-p",'--port_address', help = 'will use a random unprivileged port if none provided', default=0, type=int)
     parser.add_argument("-l",'--listen_mode', action="store_true",default=False,)
     parser.add_argument('--log_level', default=20, type=int)
@@ -97,6 +95,7 @@ def client_mode_tcp(sock : socket.socket)->int:
 
     try:
         sock.connect((str(server.ip), server.port))
+        logger.info(f"connected to {server}")
     except Exception as e:
         logger.error(f"couldn't connect to {server} error : {e}")
         error_code = 1
@@ -114,6 +113,11 @@ def client_mode_tcp(sock : socket.socket)->int:
             
     return error_code
 
+def verify_config():
+    if config.listen_mode == False and config.port_address == 0:
+        logger.error("need to provide a port when connecting")
+        exit(1)
+
 if __name__ == "__main__":
     #default config
 
@@ -122,6 +126,8 @@ if __name__ == "__main__":
     logging.basicConfig(filename=config.log_file, level=config.log_level)
 
     logger.debug(config)
+    verify_config()
+
 
     
     sock = socket.socket( socket.AF_INET, socket.SOCK_STREAM )
@@ -130,10 +136,12 @@ if __name__ == "__main__":
 
         sock = bind_and_retry(sock, config.ip_address.__str__(),config.port_address)
         logger.debug(sock)
+
         listen_mode_tcp(sock)
 
     if ( config.listen_mode == False ):
         logger.debug(sock)
+        
         client_mode_tcp(sock)
 
     sock.close()
